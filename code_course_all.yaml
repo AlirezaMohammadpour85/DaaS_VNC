@@ -1,0 +1,504 @@
+---
+
+- hosts: ubuntu
+  become: true # or yes 
+  gather_facts: no
+  vars:
+  - password_users : $6$sn6gZ.QXKUHq7A0$83qUcUI3zt12IpF6lzNG8aXb4rT/YqrxkKBY4znBerTvchO.Dt2kj.mrJpuYh.xBSqGu0FONzUaiiZiekaWXx.
+    # thats is ubuntu in hash 
+  - users: 
+    - 5167230-104779
+    - 5216510-104779
+    - 5180846-104779
+    - 5206225-104779
+    - 4373074-104779
+    - 4484448-104779
+    - 5193530-104779
+    - 4648295-104779
+    - 5052444-104779
+    # - user1
+    # - user2
+    # - user3
+    # - user4
+    # - user5
+    # - user6
+    # - user7
+    # - user8
+    # - user9
+    # - user10
+    # - user11
+  tasks:
+  # I changed become : true in order to have /home/ubuntu not /home/root/ folders
+  - name: Update system repisotory 
+    apt:
+      update_cache: yes
+      upgrade: yes
+
+    # - name: Install xfce4 minimal packages
+    #   apt:
+    #     name: '{{ item }}' 
+    #     state: present
+    #   loop:
+    #     - [ xserver-xorg, xfonts-base, xubuntu-desktop ]
+    #     - lightdm
+    
+    # - name: Install xfce4-goodies packages
+    #   apt:
+    #     name: xfce4 xfce4-goodies
+    #     state: present
+  - name: Install xfce4 minimal packages
+    apt:
+      name: '{{ item }}' 
+      state: present
+    loop:
+      - [ xfce4, xfce4-goodies]
+      - lightdm
+
+
+  - name: Install tigheVNC
+    apt:
+      name: tigervnc-standalone-server
+      state: present
+
+  # - name: restart login manager service
+  #   service: 
+  #     name: lightdm 
+  #     state: restarted
+    # - name: Install Vscode using snap
+  #   snap:
+  #     name: code 
+  #     classic: yes
+  
+  - name: Install gcc
+    apt:
+      name: gcc
+      state: present
+
+  - name: Install g++
+    apt:
+      name: g++
+      state: present
+ 
+  - name: Create users
+    user:
+      name: '{{ item }}'
+      password: '{{ password_users }}'
+      group: users
+      create_home: yes
+      # home: /home/{{ item }}
+    with_items: # loop didint work !
+      - '{{ users }}'
+
+  # after all installation reboot is required    
+  - name: Reboot the machine that might have lots of updates to apply
+    reboot:
+      reboot_timeout: 3600
+
+  - name: create vscode folder 
+    file:
+      path: /home/ubuntu/vscode
+      state: directory
+
+  - name: install vscode on local machine
+    apt:
+      deb: https://go.microsoft.com/fwlink/?LinkID=760868
+
+  - name: create empty bash file for policies
+    file:
+      path: /home/ubuntu/.http_drop.sh
+      state: touch
+      mode: 0755
+
+  - name: Edit bash file of iptables for policies
+    lineinfile:
+      path: /home/ubuntu/.http_drop.sh
+      line: '{{ item }}'
+    # with_items  >>>> loose order!
+    loop:
+      - '#!/bin/sh'
+      - '# take one input for username and drops HTTP and HTTPS packets'
+      - 'sudo iptables -A OUTPUT -p tcp --dport 80 -m owner --uid-owner $1 -j REJECT  # DROP'
+      - 'sudo iptables -A OUTPUT -p tcp --dport 8080 -m owner --uid-owner $1 -j REJECT # DROP' 
+      - 'sudo iptables -A OUTPUT -p icmp -m owner --uid-owner $1 -j REJECT'
+      - 'sudo iptables -A OUTPUT -p udp -m owner --uid-owner $1 -j REJECT'
+      - 'sudo iptables -A OUTPUT -p tcp --dport 22 -m owner --uid-owner $1 -j REJECT'
+      - 'sudo iptables -A OUTPUT -p tcp --dport 23 -m owner --uid-owner $1 -j REJECT'
+      - 'sudo iptables -A OUTPUT -p tcp --dport 443 -m owner --uid-owner $1 -j REJECT'
+
+  - name: Remove existing rc.local file for policies
+    file:
+      path: /etc/rc.local
+      state: absent
+
+  - name: create empty rc.local file for policies
+    file:
+      path: /etc/rc.local
+      state: touch
+      mode: 0755
+
+  # using blockfile need extra actions
+  - name: Edit rc.local file to start program after boot for policies
+    lineinfile:
+      path: /etc/rc.local
+      line: '{{ item }}'
+    loop:
+      - '#!/bin/bash'
+      - chmod -R 777 /home/ubuntu/.config/Code /home/ubuntu/.vscode/extensions 
+      - '# apply policies for all users'
+      - /home/ubuntu/.http_drop.sh 5167230-104779
+      - /home/ubuntu/.http_drop.sh 5216510-104779
+      - /home/ubuntu/.http_drop.sh 5180846-104779
+      - /home/ubuntu/.http_drop.sh 5206225-104779
+      - /home/ubuntu/.http_drop.sh 4373074-104779
+      - /home/ubuntu/.http_drop.sh 4484448-104779
+      - /home/ubuntu/.http_drop.sh 5193530-104779
+      - /home/ubuntu/.http_drop.sh 4648295-104779
+      - /home/ubuntu/.http_drop.sh 5052444-104779
+      - exit 0
+
+  - name: Remove existing rc.local.service file  for policies
+    file:
+      path: /etc/systemd/system/rc-local.service
+      state: absent
+
+  - name: create empty rc.local.service file for policies
+    file:
+      path: /etc/systemd/system/rc-local.service
+      state: touch
+
+  - name: Edit rc-local.service for policies
+    lineinfile:
+      path: /etc/systemd/system/rc-local.service
+      line: '{{ item }}'
+    loop:
+      - "[Unit]"
+      - Description=/etc/rc.local Compatibility
+      - Documentation=man:systemd-rc-local-generator(8)
+      - ConditionFileIsExecutable=/etc/rc.local
+      - After=network.target
+      - ''
+      - "[Service]"
+      - Type=forking
+      - ExecStart=/etc/rc.local start
+      - TimeoutSec=0
+      - RemainAfterExit=yes
+      - GuessMainPID=no
+      - ' '
+      - "[Install]"
+      - WantedBy=multi-user.target
+
+
+  - name: Enable and start rc-local.service for policies
+    systemd:
+      name: rc-local.service
+      daemon_reload: yes
+      state: stopped
+
+  - name: Enable and start rc-local.service for policies
+    systemd:
+      name: rc-local.service
+      daemon_reload: yes
+      state: started
+      enabled: yes
+
+
+- hosts: all
+  gather_facts: yes #no
+  vars: 
+  - password_remote: 
+    - 1NPXgCoH
+    - 1NPXgCoH
+    - 6FWYn3rS
+    - 8ASe6IkH
+    - B1va7DnS
+    - mDXVoS79
+    - I83Kzpq2
+    - lAggHS6b
+    - ejpEAri2
+    - gkP7ciGt
+  
+  - users_remote:
+    - ubuntu
+    - 5167230-104779
+    - 5216510-104779
+    - 5180846-104779
+    - 5206225-104779
+    - 4373074-104779
+    - 4484448-104779
+    - 5193530-104779
+    - 4648295-104779
+    - 5052444-104779
+
+  tasks:
+
+  - name: create .vnc folder 
+    file:
+      path: /home/$USER/.vnc
+      state: directory
+
+  - name: Delete xstartup and config file 
+    file:
+      path: /home/$USER/.vnc/{{ item }}
+      state: absent 
+    with_items:
+      - xstartup
+      - config
+
+  - name: create empty xstartup and config file 
+    file:
+      path: /home/$USER/.vnc/{{ item }}
+      state: touch 
+    with_items:
+      - xstartup
+      - config
+
+  - name: Edit VNC xstartup file
+    lineinfile:
+      path: /home/$USER/.vnc/xstartup
+      line: '{{ item }}'
+    # with_items  >>>> loose order!
+    loop:
+      - '#!/bin/sh'
+      - unset SESSION_MANAGER
+      - unset DBUS_SESSION_BUS_ADDRESS
+      - exec startxfce4 &
+      - exec code &
+
+  - name: Edit VNC config file
+    lineinfile:
+      path: /home/$USER/.vnc/config
+      state: present
+      line: '{{ item }}'
+    loop:  
+      - geometry=360x800
+      - ''
+      - dpi=96
+
+ # - hosts: users
+ #   gather_facts: no
+  # vars: 
+  #   - password: 123456 
+  # tasks:
+
+  - name: Remove VNC password if already set
+    become: no
+    file:
+      path: /home/$USER/.vnc/passwd
+      state: absent
+  
+  - name: Create new VNC passwd 
+    become: no
+    file:
+      path: /home/$USER/.vnc/passwd
+      state: touch
+      mode: 0600
+
+  # - name: Set default VNC password
+  #   shell: |
+  #     echo {{ item[0] }} | vncpasswd -f > /home/$USER/.vnc/passwd
+  
+  - name: Set default VNC password
+    shell: |
+      echo {{ item[0] }} | vncpasswd -f > /home/$USER/.vnc/passwd
+    with_together:
+      - '{{ password_remote }}'
+      - '{{ users_remote }}'
+    when: item[1] == ansible_user_id
+      
+  - name: Remove general bash to .run_vncserver.sh 
+    file:
+      path: /home/$USER/.run_vncserver.sh
+      state: absent
+
+  - name: Create empty bash to run vncserver  .run_vncserver.sh 
+    file:
+      path: /home/$USER/.run_vncserver.sh
+      state: touch
+      mode: 0755
+
+  - name: Edit .run_vncserver.sh
+    lineinfile:
+      path: /home/$USER/.run_vncserver.sh
+      line: '{{ item }}'
+      state: present
+    loop:
+      - '#!/bin/bash'
+      - '# example for vncserver running'
+
+  # Block add marker at the begining need to remove it by extra action that is not good
+  - name: Edit .run_vncserver.sh part 2
+    blockinfile:
+      path: /home/$USER/.run_vncserver.sh  
+      block: |
+        if [ $USER == 'ubuntu' ]
+        then
+          display=100
+        elif [ $USER == '5167230-104779' ]
+        then
+          display=1
+        elif [ $USER == '5216510-104779' ]
+        then
+          display=2
+        elif [ $USER == '5180846-104779' ]
+        then
+          display=3
+        elif [ $USER == '5206225-104779' ]
+        then
+          display=4
+        elif [ $USER == '4373074-104779' ]
+        then
+          display=5
+        elif [ $USER == '4484448-104779' ]
+        then
+          display=6
+        elif [ $USER == '5193530-104779' ]
+        then
+          display=7
+        elif [ $USER == '4648295-104779' ]
+        then
+          display=8
+        elif [ $USER == '5052444-104779' ]
+        then
+          display=9
+        fi
+        #vncserver -kill :1
+        vncserver -kill :$display
+        # $ is inputs arguments number
+        vncserver -localhost no :$display
+# With new version only the two last line are enough now I keep to be sure     
+
+  # - name: Run VNC server with ubuntu 
+  #   shell: /home/$USER/.run_vncserver.sh 
+################################################################################33
+# new version : add service localy to run vnc
+- hosts: ubuntu
+  become: true # or yes 
+  gather_facts: no
+  vars:
+  - password_users : $6$sn6gZ.QXKUHq7A0$83qUcUI3zt12IpF6lzNG8aXb4rT/YqrxkKBY4znBerTvchO.Dt2kj.mrJpuYh.xBSqGu0FONzUaiiZiekaWXx.
+    # thats is ubuntu in hash 
+  - users: 
+    - 5167230-104779
+    - 5216510-104779
+    - 5180846-104779
+    - 5206225-104779
+    - 4373074-104779
+    - 4484448-104779
+    - 5193530-104779
+    - 4648295-104779
+    - 5052444-104779
+  - display_number: [1,2,3,5,6,7,8,9]
+  - default_service:
+    - "[Unit]"
+    - Description=/etc/rc.local Compatibility
+    - Documentation=man:systemd-rc-local-generator(8)
+    - ConditionFileIsExecutable=/etc/rc.local
+    - After=network.target
+    - ''
+    - "[Service]"
+    - Type=forking
+    - User=user1
+    - ExecStart=/etc/rc.vnc start 
+    - TimeoutSec=0
+    - RemainAfterExit=yes
+    - GuessMainPID=no
+    - ' '
+    - "[Install]"
+    - WantedBy=multi-user.target
+
+  tasks:
+  # I changed become : true in order to have /home/ubuntu not /home/root/ folders
+  # edit services for running each user vncserver, Automatically (using ansible to run over users didnt lead to have gui, i.e leads to black screen)
+  - name: Remove existing rc.vncusers file 
+    file:
+      path: /etc/rc.vnc{{ item }}
+      state: absent
+    with_items:
+      - '{{ users }}'
+
+  - name: create empty rc.vncusers file 
+    file:
+      path: /etc/rc.vnc{{ item }}
+      state: touch
+      mode: 0755
+    with_items:
+      - '{{ users }}'
+
+  - name: Edit rc.vncusers file to start program after boot
+    lineinfile:
+      path: /etc/rc.vnc{{ item[0] }}
+      line: '{{ item[1] }}'
+    with_nested:
+      - '{{ users }}'
+      - ['#!/bin/bash', /home/user1/.run_vncserver.sh 1 , exit 0]
+  
+  - name: Continue edit rc.vncusers file to start program after boot
+    lineinfile:
+      path: /etc/rc.vnc{{ item[0] }}
+      regexp: '/.run_vncserver.sh 1'
+      line: '/home/{{ item[1] }}/.run_vncserver.sh {{ item[2] }}'
+    with_together:
+      - '{{ users }}'
+      - '{{ users }}'
+      - '{{ display_number }}'
+  
+  - name: Remove existing rc-vncusers.service
+    file:
+      path: /etc/systemd/system/rc-vnc{{ item }}.service
+      state: absent 
+    with_items:
+      - '{{ users }}'
+  
+  - name: create empty rc-vncusers.service 
+    file:
+      path: /etc/systemd/system/rc-vnc{{ item }}.service
+      state: touch
+      mode: 0755
+    with_items:
+      - '{{ users }}'
+
+  - name: Edit rc-vncusers.service file with default_service
+    lineinfile:
+      path: /etc/systemd/system/rc-vnc{{ item[0] }}.service
+      line: '{{ item[1] }}'
+    with_nested:
+      - '{{ users }}'
+      - '{{ default_service }}'
+  
+  - name: Customize default service
+    lineinfile:
+      path: /etc/systemd/system/rc-vnc{{ item[0] }}.service
+      regexp: "User=user1"
+      line: "User={{ item[1] }}"
+    with_together:
+      - '{{ users }}'
+      - '{{ users }}'
+
+  - name: Customize default service step 2
+    lineinfile:
+      path: /etc/systemd/system/rc-vnc{{ item[0] }}.service
+      regexp: "ExecStart"
+      line: "ExecStart=/etc/rc.vnc{{ item[1] }} start"
+    with_together:
+      - '{{ users }}'
+      - '{{ users }}'
+
+  - name: stopped existed rc-vncusers.services
+    systemd:
+      name: rc-vnc{{ item }}.service
+      daemon_reload: yes
+      state: stopped
+    with_items:
+      - '{{ users }}'
+
+  - name: Enable and start  rc-vncusers.services
+    systemd:
+      name: rc-vnc{{ item }}.service
+      daemon_reload: yes
+      state: started
+      enabled: yes
+    with_items:
+      - '{{ users }}'
+
+
+
