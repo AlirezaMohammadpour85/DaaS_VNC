@@ -6,7 +6,7 @@
   vars:
   - password_users : $6$sn6gZ.QXKUHq7A0$83qUcUI3zt12IpF6lzNG8aXb4rT/YqrxkKBY4znBerTvchO.Dt2kj.mrJpuYh.xBSqGu0FONzUaiiZiekaWXx.
     # thats is ubuntu in hash 
-  - users: 
+  - users: # Replace with your usernames
     - 5167230-104779
     - 5216510-104779
     - 5180846-104779
@@ -16,36 +16,13 @@
     - 5193530-104779
     - 4648295-104779
     - 5052444-104779
-    # - user1
-    # - user2
-    # - user3
-    # - user4
-    # - user5
-    # - user6
-    # - user7
-    # - user8
-    # - user9
-    # - user10
-    # - user11
+
   tasks:
-  # I changed become : true in order to have /home/ubuntu not /home/root/ folders
   - name: Update system repisotory 
     apt:
       update_cache: yes
       upgrade: yes
 
-    # - name: Install xfce4 minimal packages
-    #   apt:
-    #     name: '{{ item }}' 
-    #     state: present
-    #   loop:
-    #     - [ xserver-xorg, xfonts-base, xubuntu-desktop ]
-    #     - lightdm
-    
-    # - name: Install xfce4-goodies packages
-    #   apt:
-    #     name: xfce4 xfce4-goodies
-    #     state: present
   - name: Install xfce4 minimal packages
     apt:
       name: '{{ item }}' 
@@ -59,15 +36,6 @@
     apt:
       name: tigervnc-standalone-server
       state: present
-
-  # - name: restart login manager service
-  #   service: 
-  #     name: lightdm 
-  #     state: restarted
-    # - name: Install Vscode using snap
-  #   snap:
-  #     name: code 
-  #     classic: yes
   
   - name: Install gcc
     apt:
@@ -113,7 +81,6 @@
     lineinfile:
       path: /home/ubuntu/.http_drop.sh
       line: '{{ item }}'
-    # with_items  >>>> loose order!
     loop:
       - '#!/bin/sh'
       - '# take one input for username and drops HTTP and HTTPS packets'
@@ -141,7 +108,7 @@
     lineinfile:
       path: /etc/rc.local
       line: '{{ item }}'
-    loop:
+    loop: # Replace with your usernames
       - '#!/bin/bash'
       - chmod -R 777 /home/ubuntu/.config/Code /home/ubuntu/.vscode/extensions 
       - '# apply policies for all users'
@@ -205,7 +172,7 @@
 - hosts: all
   gather_facts: yes #no
   vars: 
-  - password_remote: 
+  - password_remote: # Replace with your passwords for each usernames. these passwords used for remote access via VNC
     - 1NPXgCoH
     - 1NPXgCoH
     - 6FWYn3rS
@@ -217,7 +184,7 @@
     - ejpEAri2
     - gkP7ciGt
   
-  - users_remote:
+  - users_remote: # Replace with your usernames
     - ubuntu
     - 5167230-104779
     - 5216510-104779
@@ -293,10 +260,6 @@
       state: touch
       mode: 0600
 
-  # - name: Set default VNC password
-  #   shell: |
-  #     echo {{ item[0] }} | vncpasswd -f > /home/$USER/.vnc/passwd
-  
   - name: Set default VNC password
     shell: |
       echo {{ item[0] }} | vncpasswd -f > /home/$USER/.vnc/passwd
@@ -327,13 +290,14 @@
 
   # Block add marker at the begining need to remove it by extra action that is not good
   - name: Edit .run_vncserver.sh part 2
+    # Replace with your usernames 
     blockinfile:
       path: /home/$USER/.run_vncserver.sh  
       block: |
         if [ $USER == 'ubuntu' ]
         then
           display=100
-        elif [ $USER == '5167230-104779' ]
+        elif [ $USER == '5167230-104779' ] 
         then
           display=1
         elif [ $USER == '5216510-104779' ]
@@ -377,7 +341,7 @@
   vars:
   - password_users : $6$sn6gZ.QXKUHq7A0$83qUcUI3zt12IpF6lzNG8aXb4rT/YqrxkKBY4znBerTvchO.Dt2kj.mrJpuYh.xBSqGu0FONzUaiiZiekaWXx.
     # thats is ubuntu in hash 
-  - users: 
+  - users:  # Replace with your usernames 
     - 5167230-104779
     - 5216510-104779
     - 5180846-104779
@@ -387,7 +351,7 @@
     - 5193530-104779
     - 4648295-104779
     - 5052444-104779
-  - display_number: [1,2,3,5,6,7,8,9]
+  - display_number: [1,2,3,5,6,7,8,9] # must be equal to the number of usernames
   - default_service:
     - "[Unit]"
     - Description=/etc/rc.local Compatibility
@@ -407,8 +371,6 @@
     - WantedBy=multi-user.target
 
   tasks:
-  # I changed become : true in order to have /home/ubuntu not /home/root/ folders
-  # edit services for running each user vncserver, Automatically (using ansible to run over users didnt lead to have gui, i.e leads to black screen)
   - name: Remove existing rc.vncusers file 
     file:
       path: /etc/rc.vnc{{ item }}

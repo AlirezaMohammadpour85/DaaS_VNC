@@ -1,0 +1,99 @@
+---
+- hosts: ubuntu
+  become: true # or yes
+  gather_facts: no
+  tasks:
+  - name: Update system repisotory
+    apt:
+      update_cache: yes
+      upgrade: yes
+
+# ansible.builtin.sheel: – Ansible shell module that allows us to run bash shell commands on our remote Linux servers
+  - name: Install Docker
+    ansible.builtin.shell: cd ~ && curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh
+  
+  - name: Remove existing bash file
+    file:
+      path: /home/ubuntu/.run_container.sh
+      state: absent
+
+  - name: create empty bash file
+    file:
+      path: /home/ubuntu/.run_container.sh
+      state: touch
+      mode: 0755
+
+  - name: Edit bash file to run docker
+    lineinfile:
+      path: /home/ubuntu/.run_container.sh
+      line: '{{ item }}'
+    loop:
+      - '#!/bin/sh'
+      - 'docker pull oznu/guacamole'
+      - 'docker run -p 8080:8080 oznu/guacamole'
+
+  - name: Remove existing rc.local file for policies
+    file:
+      path: /etc/rc.local
+      state: absent
+
+  - name: create empty rc.local file for policies
+    file:
+      path: /etc/rc.local
+      state: touch
+      mode: 0755
+
+  - name: Edit rc.local file to start program after boot for policies
+    lineinfile:
+      path: /etc/rc.local
+      line: '{{ item }}'
+    loop: # Replace with your usernames
+      - '#!/bin/bash'
+      - /home/ubuntu/.run_container.sh
+      - exit 0
+
+  - name: Remove existing rc.local.service file  for policies
+    file:
+      path: /etc/systemd/system/rc-local.service
+      state: absent
+
+  - name: create empty rc.local.service file for policies
+    file:
+      path: /etc/systemd/system/rc-local.service
+      state: touch
+
+  - name: Edit rc-local.service for policies
+    lineinfile:
+      path: /etc/systemd/system/rc-local.service
+      line: '{{ item }}'
+    loop:
+      - "[Unit]"
+      - Description=/etc/rc.local Compatibility
+      - Documentation=man:systemd-rc-local-generator(8)
+      - ConditionFileIsExecutable=/etc/rc.local
+      - After=network.target
+      - ''
+      - "[Service]"
+      - Type=forking
+      - ExecStart=/etc/rc.local start
+      - TimeoutSec=0
+      - RemainAfterExit=yes
+      - GuessMainPID=no
+      - ' '
+      - "[Install]"
+      - WantedBy=multi-user.target
+
+
+  - name: Enable and start rc-local.service for policies
+    systemd:
+      name: rc-local.service
+      daemon_reload: yes
+      state: stopped
+
+  - name: Enable and start rc-local.service for policies
+    systemd:
+      name: rc-local.service
+      daemon_reload: yes
+      state: started
+      enabled: yes
+
