@@ -360,7 +360,7 @@
     - 5052444-104779
     - alex
     
-  - display_number: [1,2,3,5,6,7,8,9,10] # must be equal to the number of usernames
+  - display_number: [1,2,3,4,5,6,7,8,9,10] # must be equal to the number of usernames
   - default_service:
     - "[Unit]"
     - Description=/etc/rc.local Compatibility
