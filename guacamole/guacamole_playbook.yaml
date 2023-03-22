@@ -8,10 +8,23 @@
       update_cache: yes
       upgrade: yes
 
+  - name: install dependencies
+    apt:
+      name: "{{item}}"
+      state: present
+      update_cache: yes
+    loop:
+      - apt-transport-https
+      - curl
+
 # ansible.builtin.sheel: – Ansible shell module that allows us to run bash shell commands on our remote Linux servers
-  - name: Install Docker
-    ansible.builtin.shell: cd ~ && curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh
+  - name: get Docker
+    ansible.builtin.shell: curl -fsSL https://get.docker.com -o get-docker.sh  
   
+  - name: install docker
+    shell: |
+      sh get-docker.sh
+
   - name: Remove existing bash file
     file:
       path: /home/ubuntu/.run_container.sh
@@ -30,7 +43,7 @@
     loop:
       - '#!/bin/sh'
       - 'docker pull oznu/guacamole'
-      - 'docker run -p 8080:8080 oznu/guacamole'
+      - 'docker run -dp 8080:8080 -v /config:/config oznu/guacamole' # add -v to save the infor even after restart the docker
 
   - name: Remove existing rc.local file for policies
     file:
@@ -84,7 +97,7 @@
       - WantedBy=multi-user.target
 
 
-  - name: Enable and start rc-local.service for policies
+  - name: stop existing rc-local.service for policies
     systemd:
       name: rc-local.service
       daemon_reload: yes

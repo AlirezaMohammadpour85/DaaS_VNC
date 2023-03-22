@@ -16,6 +16,7 @@
     - 5193530-104779
     - 4648295-104779
     - 5052444-104779
+    - alex
 
   tasks:
   - name: Update system repisotory 
@@ -121,6 +122,7 @@
       - /home/ubuntu/.http_drop.sh 5193530-104779
       - /home/ubuntu/.http_drop.sh 4648295-104779
       - /home/ubuntu/.http_drop.sh 5052444-104779
+      - /home/ubuntu/.http_drop.sh alex
       - exit 0
 
   - name: Remove existing rc.local.service file  for policies
@@ -183,6 +185,7 @@
     - lAggHS6b
     - ejpEAri2
     - gkP7ciGt
+    - 1NPXgCoH
   
   - users_remote: # Replace with your usernames
     - ubuntu
@@ -195,6 +198,7 @@
     - 5193530-104779
     - 4648295-104779
     - 5052444-104779
+    - alex
 
   tasks:
 
@@ -324,6 +328,9 @@
         elif [ $USER == '5052444-104779' ]
         then
           display=9
+        elif [ $USER == 'alex' ]
+        then
+          display=10
         fi
         #vncserver -kill :1
         vncserver -kill :$display
@@ -351,7 +358,9 @@
     - 5193530-104779
     - 4648295-104779
     - 5052444-104779
-  - display_number: [1,2,3,5,6,7,8,9] # must be equal to the number of usernames
+    - alex
+    
+  - display_number: [1,2,3,5,6,7,8,9,10] # must be equal to the number of usernames
   - default_service:
     - "[Unit]"
     - Description=/etc/rc.local Compatibility
