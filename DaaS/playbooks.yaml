@@ -16,7 +16,7 @@
     - 5193530-104779
     - 4648295-104779
     - 5052444-104779
-    - alex-104779
+    - prof-admin
 
   tasks:
   - name: Update system repisotory 
@@ -122,7 +122,6 @@
       - /home/ubuntu/.http_drop.sh 5193530-104779
       - /home/ubuntu/.http_drop.sh 4648295-104779
       - /home/ubuntu/.http_drop.sh 5052444-104779
-      - /home/ubuntu/.http_drop.sh alex-104779
       - exit 0
 
   - name: Remove existing rc.local.service file  for policies
@@ -198,7 +197,7 @@
     - 5193530-104779
     - 4648295-104779
     - 5052444-104779
-    - alex-104779
+    - prof-admin
 
   tasks:
 
@@ -328,11 +327,10 @@
         elif [ $USER == '5052444-104779' ]
         then
           display=9
-        elif [ $USER == 'alex-104779' ]
+        elif [ $USER == 'prof-admin' ]
         then
           display=10
         fi
-        #vncserver -kill :1
         vncserver -kill :$display
         # $ is inputs arguments number
         vncserver -localhost no :$display
@@ -358,7 +356,7 @@
     - 5193530-104779
     - 4648295-104779
     - 5052444-104779
-    - alex-104779
+    - prof-admin
     
   - display_number: [1,2,3,4,5,6,7,8,9,10] # must be equal to the number of usernames
   - default_service:
