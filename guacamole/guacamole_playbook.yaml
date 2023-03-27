@@ -43,7 +43,7 @@
     loop:
       - '#!/bin/sh'
       - 'docker pull oznu/guacamole'
-      - 'docker run -dp 8080:8080 -v /config:/config oznu/guacamole' # add -v to save the infor even after restart the docker
+      - 'docker run -dp 8080:8080 -v /home/ubuntu/.config:/config oznu/guacamole' # add -v to save the infor even after restart the docker
 
   - name: Remove existing rc.local file for policies
     file:
